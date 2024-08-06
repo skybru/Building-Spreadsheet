@@ -54,7 +54,8 @@ const applyFunction = (str) => {
     const functionCall = /([a-z0-9]*)\(([0-9., ]*)\)(?!.*\()/i; //This expression will look for function calls like sum(1, 4).
     const toNumberList = (args) => args.split(",").map(parseFloat);
     const apply = (fn, args) => spreadsheetFunctions[fn.toLowerCase()](toNumberList(args));
-    return str2.replace(functionCall, () => {});
+    return str2.replace(functionCall, (match, fn, args) => 
+        spreadsheetFunctions.hasOwnProperty(fn.toLowerCase()) ? apply(fn, args) : match);
 };
 
 const average = (nums) => sum(nums) / nums.length;
@@ -67,16 +68,27 @@ const median = (nums) => {
 };
 
 const spreadsheetFunctions = {
+    "": (arg) => arg,
     sum,
     average,
-    median
+    median,
+    even: (nums) => nums.filter(isEven),
+    someeven: (nums) => nums.some(isEven),
+    everyeven: (nums) => nums.every(isEven),
+    firsttwo: (nums) => nums.slice(0, 2),
+    lasttwo: (nums) => nums.slice(nums.length - 2, nums.length),
+    has2: (nums) => nums.includes(2),
+    increment: (nums) => nums.map(item => item + 1),
+    random: (nums) => Math.floor(Math.random() * (nums[1] - nums[0]) + nums[0]), //fCC:   random: ([x, y]) => Math.floor(Math.random() * y + x),
+    range: (nums) => range(...nums),
+    nodupes: (nums) => [...new Set(nums)]
 };
 
 const update = (event) => {
     const element = event.target;
     const value = element.value.replace(/\s/g, "");
     if (!value.includes(element.id) && value.startsWith("=")) {
-
+        element.value = evalFormula(value.substring(1), Array.from(document.getElementById("container").children));
     }
 };
 
@@ -92,5 +104,6 @@ const evalFormula = (x, cells) => {
         rangeFromString(num1, num2).map(addCharacters(char1)(char2)));
     const cellRegex = /[A-J][1-9][0-9]?/gi;
     const cellExpanded = rangeExpanded.replace(cellRegex, (match) => idToText(match.toUpperCase()));
-    
+    const functionExpanded = applyFunction(cellExpanded);
+    return functionExpanded === x ? functionExpanded : evalFormula(functionExpanded, cells);
 };
